@@ -114,7 +114,7 @@ test("AC13: malformed or missing ids on /weekly/[id] and /goals/[id] return 404"
 });
 
 test("AC20: dragging a card to 완료 updates the weekly % and the goal % on /weekly and /goals/[id] without a reload", async ({ page }) => {
-  // The nav link opens /board's default view (today, Asia/Seoul), so seed around the real today.
+  // The nav link opens /board's default (all) view; seed around the real today (Asia/Seoul) so the plan is this week's.
   const today = todayKey();
   const monday = mondayOf(today);
   const goal = await seedGoal("올해 목표", yearOf(monday));

@@ -4,28 +4,36 @@ import { ProgressBar } from "@/components/ProgressBar";
 import { ViewSwitcher } from "@/components/ViewSwitcher";
 import { addDaysKey, addYearsKey, todayKey } from "@/lib/date";
 import { getBoardData, type BoardView } from "@/lib/queries";
-import { boardViewInput, dateKeyString } from "@/lib/validation";
+import { boardViewParam, dateKeyString } from "@/lib/validation";
 
 export const dynamic = "force-dynamic";
 
 const first = (v: string | string[] | undefined) => (Array.isArray(v) ? v[0] : v);
 
 function step(view: BoardView, date: string, dir: 1 | -1): string {
+  if (view === "all") return date; // no prev/next in the all view
   if (view === "day") return addDaysKey(date, dir);
   if (view === "week") return addDaysKey(date, 7 * dir);
   return addYearsKey(date, dir);
 }
 
-// /board?view=day|week|year&date=YYYY-MM-DD; invalid or missing values fall back to today's day view (PLAN 단계 6.3).
+// /board?view=all|day|week|year&date=YYYY-MM-DD; a missing or invalid view falls back to the all view,
+// a missing or invalid date to today (PLAN 단계 6.3).
 export default async function BoardPage({ searchParams }: PageProps<"/board">) {
   const params = await searchParams;
   const today = todayKey();
-  const view = boardViewInput.catch("day").parse(first(params.view));
+  const view = boardViewParam.parse(first(params.view));
   const date = dateKeyString.catch(today).parse(first(params.date));
   const data = await getBoardData(view, date);
 
   const rangeLabel =
-    data.view === "day" ? data.date : data.view === "week" ? `${data.from} ~ ${data.to}` : `${data.year}년`;
+    data.view === "all"
+      ? "전체 할 일"
+      : data.view === "day"
+        ? data.date
+        : data.view === "week"
+          ? `${data.from} ~ ${data.to}`
+          : `${data.year}년`;
 
   return (
     <main className="mx-auto flex w-full max-w-6xl flex-1 flex-col gap-4 p-4">
@@ -105,7 +113,14 @@ export default async function BoardPage({ searchParams }: PageProps<"/board">) {
         </section>
       ) : (
         // Unlinked todos of the same range are listed separately; the kanban still shows every todo in range.
-        <Board todos={data.todos} plans={data.plans} defaultDate={view === "day" ? date : undefined} showUnlinked />
+        // `range` lets the board tell the user when a saved todo falls outside what is shown (all view: no range).
+        <Board
+          todos={data.todos}
+          plans={data.plans}
+          defaultDate={data.view === "day" ? date : undefined}
+          range={data.view === "all" ? undefined : { from: data.from, to: data.to }}
+          showUnlinked
+        />
       )}
     </main>
   );

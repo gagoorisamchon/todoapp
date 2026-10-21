@@ -9,23 +9,25 @@ import { cn } from "@/lib/utils";
 
 // Kept here (not imported from lib/validation) so mongoose stays out of the client bundle.
 const VIEWS: { view: BoardView; label: string }[] = [
+  { view: "all", label: "전체" },
   { view: "day", label: "일간" },
   { view: "week", label: "주간" },
   { view: "year", label: "연간" },
 ];
-const STEP_LABELS: Record<BoardView, [string, string]> = {
+const STEP_LABELS: Record<Exclude<BoardView, "all">, [string, string]> = {
   day: ["이전 날", "다음 날"],
   week: ["이전 주", "다음 주"],
   year: ["이전 해", "다음 해"],
 };
 
-export const boardHref = (view: BoardView, date: string) => `/board?view=${view}&date=${date}`;
+// The all view has no date range, so it is plain /board (the default view, same URL as the nav link).
+export const boardHref = (view: BoardView, date: string) => (view === "all" ? "/board" : `/board?view=${view}&date=${date}`);
 
 type Props = {
   view: BoardView;
   date: string;
   rangeLabel: string;
-  prevDate: string; // day ±1, week ±7, year ±1 (computed on the server with lib/date)
+  prevDate: string; // day ±1, week ±7, year ±1 (computed on the server with lib/date); unused in the all view
   nextDate: string;
   today: string;
 };
@@ -33,7 +35,9 @@ type Props = {
 // All view state lives in the URL, so reload and back/forward keep it (PLAN 단계 6.3).
 export function ViewSwitcher({ view, date, rangeLabel, prevDate, nextDate, today }: Props) {
   const router = useRouter();
-  const [prevLabel, nextLabel] = STEP_LABELS[view];
+  // The all view has no range to step through; picking a date or 오늘 opens that day's view.
+  const isAll = view === "all";
+  const dateView = isAll ? "day" : view;
 
   return (
     <div className="flex flex-wrap items-center gap-2 rounded-xl border p-2" data-testid="view-switcher">
@@ -56,23 +60,27 @@ export function ViewSwitcher({ view, date, rangeLabel, prevDate, nextDate, today
         </ul>
       </nav>
       <div className="flex items-center gap-1">
-        <Link
-          href={boardHref(view, prevDate)}
-          aria-label={prevLabel}
-          className="rounded-md p-1.5 text-muted-foreground hover:bg-muted"
-        >
-          <ChevronLeftIcon className="size-4" />
-        </Link>
+        {!isAll && (
+          <Link
+            href={boardHref(view, prevDate)}
+            aria-label={STEP_LABELS[view][0]}
+            className="rounded-md p-1.5 text-muted-foreground hover:bg-muted"
+          >
+            <ChevronLeftIcon className="size-4" />
+          </Link>
+        )}
         <span className="min-w-36 text-center text-sm font-medium tabular-nums" data-testid="view-range">
           {rangeLabel}
         </span>
-        <Link
-          href={boardHref(view, nextDate)}
-          aria-label={nextLabel}
-          className="rounded-md p-1.5 text-muted-foreground hover:bg-muted"
-        >
-          <ChevronRightIcon className="size-4" />
-        </Link>
+        {!isAll && (
+          <Link
+            href={boardHref(view, nextDate)}
+            aria-label={STEP_LABELS[view][1]}
+            className="rounded-md p-1.5 text-muted-foreground hover:bg-muted"
+          >
+            <ChevronRightIcon className="size-4" />
+          </Link>
+        )}
       </div>
       <Input
         type="date"
@@ -81,11 +89,11 @@ export function ViewSwitcher({ view, date, rangeLabel, prevDate, nextDate, today
         key={date}
         defaultValue={date}
         onChange={(e) => {
-          if (e.target.value) router.push(boardHref(view, e.target.value));
+          if (e.target.value) router.push(boardHref(dateView, e.target.value));
         }}
       />
-      {date !== today && (
-        <Link href={boardHref(view, today)} className="rounded-md px-3 py-1.5 text-sm text-muted-foreground hover:bg-muted">
+      {(isAll || date !== today) && (
+        <Link href={boardHref(dateView, today)} className="rounded-md px-3 py-1.5 text-sm text-muted-foreground hover:bg-muted">
           오늘
         </Link>
       )}

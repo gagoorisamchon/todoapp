@@ -55,8 +55,10 @@ export const goalInput = z.object({
 
 export const goalUpdateInput = goalInput.partial().extend({ id: objectIdString });
 
-// /board?view=…&date=… (PLAN 단계 6.3).
-export const boardViewInput = z.enum(["day", "week", "year"]);
+// /board?view=…&date=… (PLAN 단계 6.3). "all" (every date) is the default view.
+export const boardViewInput = z.enum(["all", "day", "week", "year"]);
+// Missing or unknown ?view= falls back to the all view.
+export const boardViewParam = boardViewInput.catch("all");
 
 // R7 carry-over: move to an existing next-week plan or create one in the same transaction.
 export const carryOverInput = z.object({

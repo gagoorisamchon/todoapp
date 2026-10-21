@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  boardViewParam,
   goalInput,
   goalUpdateInput,
   objectIdString,
@@ -128,5 +129,14 @@ describe("goalInput / goalUpdateInput", () => {
   it("update is id + partial", () => {
     expect(goalUpdateInput.parse({ id: oid, year: 2027 })).toEqual({ id: oid, year: 2027 });
     expect(goalUpdateInput.safeParse({ year: 2027 }).success).toBe(false);
+  });
+});
+
+describe("boardViewParam", () => {
+  it("keeps known views and falls back to all when missing or invalid", () => {
+    for (const view of ["all", "day", "week", "year"]) expect(boardViewParam.parse(view)).toBe(view);
+    expect(boardViewParam.parse(undefined)).toBe("all");
+    expect(boardViewParam.parse("month")).toBe("all");
+    expect(boardViewParam.parse("")).toBe("all");
   });
 });

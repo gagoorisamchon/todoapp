@@ -95,9 +95,10 @@ export async function getUnlinkedTodos(): Promise<TodoDTO[]> {
 }
 
 // /board views (PLAN 단계 6.3). `date` must already be a valid dateKey.
-export type BoardView = "day" | "week" | "year";
+export type BoardView = "all" | "day" | "week" | "year";
 
 export type BoardData =
+  | { view: "all"; date: string; todos: TodoDTO[]; plans: WeeklyPlanWithProgress[] }
   | { view: "day"; date: string; from: string; to: string; todos: TodoDTO[]; plans: WeeklyPlanWithProgress[] }
   | {
       view: "week";
@@ -116,6 +117,10 @@ export async function getBoardData(view: BoardView, date: string): Promise<Board
     return { view, date, year, goals: await getGoalsWithProgress({ year }) };
   }
   // All plans are still passed so cards show their plan and the form can link any plan.
+  if (view === "all") {
+    const [todos, plans] = await Promise.all([listTodos(), getWeeklyPlansWithProgress()]);
+    return { view, date, todos, plans };
+  }
   const from = view === "day" ? date : mondayOf(date);
   const to = view === "day" ? date : weekEnd(from);
   const [todos, plans] = await Promise.all([

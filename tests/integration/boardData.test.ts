@@ -20,6 +20,27 @@ async function seed() {
 }
 
 describe("getBoardData", () => {
+  it("all: every todo regardless of date (R9 order), including every unlinked one, and all plans", async () => {
+    await seed();
+    await createTodo({ title: "last year", date: "2025-03-01" });
+    const data = await getBoardData("all", "2026-10-20");
+    if (data.view !== "all") throw new Error("expected all");
+    expect(data.date).toBe("2026-10-20");
+    expect(data.todos.map((t) => [t.title, t.date])).toEqual([
+      ["last year", "2025-03-01"],
+      ["tue", "2026-10-20"],
+      ["tue unlinked", "2026-10-20"],
+      ["sun", "2026-10-25"],
+      ["next mon", MON2],
+    ]);
+    expect(data.todos.filter((t) => t.weeklyPlanId === null).map((t) => t.title)).toEqual([
+      "last year",
+      "tue unlinked",
+      "sun",
+    ]);
+    expect(data.plans).toHaveLength(2);
+  });
+
   it("day: only todos on that date", async () => {
     await seed();
     const data = await getBoardData("day", "2026-10-20");

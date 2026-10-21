@@ -69,6 +69,8 @@ test("AC21: the four cards show today's counts, weekly %, goal % and the attenti
 
   const attention = page.getByTestId("dashboard-attention");
   await expect(attention.getByTestId("unlinked-count")).toHaveText("3");
+  // The count covers every date, so it links to the all view's unlinked section.
+  await expect(attention.getByRole("link", { name: /3\s*개/ })).toHaveAttribute("href", "/board#unlinked-heading");
   await expect(attention.getByTestId("lastweek-incomplete-count")).toHaveText("2");
   const lastRow = attention.getByTestId("lastweek-plan");
   await expect(lastRow).toContainText("지난주 계획");

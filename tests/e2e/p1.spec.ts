@@ -1,4 +1,5 @@
 import { expect, test, type Page } from "@playwright/test";
+import { todayKey } from "../../lib/date";
 import { Todo } from "../../lib/models/Todo";
 import { WeeklyPlan } from "../../lib/models/WeeklyPlan";
 import { card, column, findTodo, findTodoByTitle, gotoBoard, seedPlan, seedTodo, setTodoStatus } from "./helpers/board";
@@ -135,14 +136,17 @@ test("AC16: day, week and year views show their defined content and survive a re
   await expect(page.getByTestId("year-tree")).toContainText("2026 목표");
 });
 
-test("AC16: /board without parameters shows today's day view", async ({ page }) => {
-  await page.goto("/board");
-  await expect(page.getByRole("navigation", { name: "보기 전환" }).getByRole("link", { name: "일간" })).toHaveAttribute(
-    "aria-current",
-    "page",
-  );
+test("AC16: an unknown view falls back to the all view and an invalid date to today", async ({ page }) => {
+  const switcher = page.getByRole("navigation", { name: "보기 전환" });
+  await page.goto("/board?view=month&date=nope");
+  await expect(switcher.getByRole("link", { name: "전체" })).toHaveAttribute("aria-current", "page");
+  await expect(page.getByTestId("view-range")).toHaveText("전체 할 일");
   await expect(page.getByTestId("unlinked-section")).toBeVisible();
   await expect(page.getByTestId("column-todo")).toBeVisible();
+
+  await page.goto("/board?view=day&date=2026-02-30");
+  await expect(switcher.getByRole("link", { name: "일간" })).toHaveAttribute("aria-current", "page");
+  await expect(page.getByTestId("view-range")).toHaveText(todayKey());
 });
 
 test("AC17a: with no next-week plan the dialog creates one linked to the goal and moves the unfinished todos", async ({

@@ -4,7 +4,7 @@ import { createTodo, updateTodoStatus } from "../../../lib/services/todos";
 import { createWeeklyPlan } from "../../../lib/services/weeklyPlans";
 import { connectE2EDb } from "./db";
 
-// Specs pin the board to a fixed day so they do not depend on the real "today" (default /board view, PLAN 단계 6).
+// Specs pin the board to a fixed day so they do not depend on the real "today" (/board itself defaults to the all view, PLAN 단계 6.3).
 export const SEED_DAY = "2026-10-20";
 
 /** Opens /board (default: day view of SEED_DAY) and waits until React has hydrated (dnd-kit mounts its live region only on the client). */

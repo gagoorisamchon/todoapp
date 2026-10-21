@@ -13,12 +13,15 @@ import {
   type UniqueIdentifier,
 } from "@dnd-kit/core";
 import { PlusIcon } from "lucide-react";
-import { useId, useMemo, useOptimistic, useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
+import { useEffect, useId, useMemo, useOptimistic, useState, useTransition } from "react";
 import { toast } from "sonner";
 import { deleteTodo, updateTodoStatus } from "@/app/actions/todos";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { TodoForm } from "@/components/forms/TodoForm";
 import { Button } from "@/components/ui/button";
+import { boardHref } from "@/components/ViewSwitcher";
+import { isWithin } from "@/lib/date";
 import type { TodoDTO, WeeklyPlanDTO } from "@/lib/dto";
 import type { TodoStatus } from "@/lib/models/Todo";
 import type { WeeklyPlanWithProgress } from "@/lib/queries";
@@ -83,9 +86,13 @@ type Props = {
   defaultPlan?: WeeklyPlanDTO; // new todos start linked to this plan (/weekly/[id])
   defaultDate?: string; // new todos start on this date (/board day view)
   showUnlinked?: boolean; // list todos without a plan in a separate "주간 계획 없음" section (/board)
+  range?: { from: string; to: string }; // dates shown (/board day/week); undefined = no date filter (all view, /weekly/[id])
 };
 
-export function Board({ todos, plans, title = "칸반 보드", defaultPlan, defaultDate, showUnlinked = false }: Props) {
+const HIGHLIGHT_MS = 2000;
+
+export function Board({ todos, plans, title = "칸반 보드", defaultPlan, defaultDate, showUnlinked = false, range }: Props) {
+  const router = useRouter();
   const dndId = useId();
   const [, startTransition] = useTransition();
   const [optimisticTodos, applyMove] = useOptimistic(todos, (state: TodoDTO[], move: Move) =>
@@ -94,6 +101,7 @@ export function Board({ todos, plans, title = "칸반 보드", defaultPlan, defa
   const [form, setForm] = useState<FormTarget | null>(null);
   const [deleting, setDeleting] = useState<TodoDTO | null>(null);
   const [deletePending, startDelete] = useTransition();
+  const [highlightId, setHighlightId] = useState<string | null>(null);
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
@@ -111,6 +119,29 @@ export function Board({ todos, plans, title = "칸반 보드", defaultPlan, defa
     () => optimisticTodos.filter((t) => t.weeklyPlanId === null).sort(byDateThenCreated),
     [optimisticTodos],
   );
+
+  // The highlight timer starts once the new card has arrived with the refreshed props.
+  const highlightShown = highlightId !== null && todos.some((t) => t.id === highlightId);
+  useEffect(() => {
+    if (!highlightShown) return;
+    const timer = setTimeout(() => setHighlightId(null), HIGHLIGHT_MS);
+    return () => clearTimeout(timer);
+  }, [highlightShown]);
+
+  // A todo saved outside the shown dates would silently vanish, so say where it went (PLAN AC23).
+  function handleSaved(todo: TodoDTO, created: boolean) {
+    const message = created ? "할 일을 추가했습니다" : "할 일을 수정했습니다";
+    const hidden = range !== undefined && !isWithin(todo.date, range.from, range.to);
+    if (hidden) {
+      toast.success(message, {
+        description: `${todo.date} 날짜에 저장되어 지금 화면에는 보이지 않습니다.`,
+        action: { label: "보기", onClick: () => router.push(boardHref("day", todo.date)) },
+      });
+      return;
+    }
+    toast.success(message);
+    if (created) setHighlightId(todo.id);
+  }
 
   function handleDragEnd({ active, over }: DragEndEvent) {
     const status = over?.id;
@@ -166,7 +197,9 @@ export function Board({ todos, plans, title = "칸반 보드", defaultPlan, defa
             <span className="rounded-full bg-muted px-2 text-xs font-normal text-muted-foreground">{unlinked.length}</span>
           </h2>
           {unlinked.length === 0 ? (
-            <p className="text-xs text-muted-foreground">이 기간에는 주간 계획에 연결되지 않은 할 일이 없습니다.</p>
+            <p className="text-xs text-muted-foreground">
+              {range ? "이 기간에는 주간 계획에 연결되지 않은 할 일이 없습니다." : "주간 계획에 연결되지 않은 할 일이 없습니다."}
+            </p>
           ) : (
             <ul className="flex flex-col gap-1">
               {unlinked.map((todo) => (
@@ -208,6 +241,7 @@ export function Board({ todos, plans, title = "칸반 보드", defaultPlan, defa
                   plan={todo.weeklyPlanId ? planById.get(todo.weeklyPlanId) : undefined}
                   onEdit={(t) => setForm({ key: Date.now(), todo: t })}
                   onDelete={setDeleting}
+                  highlighted={todo.id === highlightId}
                 />
               ))}
             </Column>
@@ -224,6 +258,7 @@ export function Board({ todos, plans, title = "칸반 보드", defaultPlan, defa
           defaultDate={defaultDate}
           open
           onOpenChange={(open) => !open && setForm(null)}
+          onSaved={handleSaved}
         />
       )}
 

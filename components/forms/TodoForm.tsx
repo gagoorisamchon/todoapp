@@ -18,6 +18,7 @@ type Props = {
   defaultDate?: string; // create only: prefill the date (e.g. the /board day view's date)
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  onSaved?: (todo: TodoDTO, created: boolean) => void; // after a successful save, before the dialog closes
 };
 
 const FALLBACK_ERROR = "저장하지 못했습니다. 다시 시도하세요.";
@@ -41,7 +42,7 @@ export function FormError({ message }: { message: string | null }) {
   );
 }
 
-export function TodoForm({ todo, plans, defaultPlan, defaultDate, open, onOpenChange }: Props) {
+export function TodoForm({ todo, plans, defaultPlan, defaultDate, open, onOpenChange, onSaved }: Props) {
   const [title, setTitle] = useState(todo?.title ?? "");
   const [date, setDate] = useState(todo?.date ?? defaultPlan?.startDate ?? defaultDate ?? "");
   const [planId, setPlanId] = useState(todo ? (todo.weeklyPlanId ?? "") : (defaultPlan?.id ?? ""));
@@ -66,6 +67,7 @@ export function TodoForm({ todo, plans, defaultPlan, defaultDate, open, onOpenCh
       try {
         const result = todo ? await updateTodo({ id: todo.id, ...values }) : await createTodo(values);
         if (result.ok) {
+          onSaved?.(result.data, !todo);
           onOpenChange(false);
           return;
         }

@@ -26,6 +26,11 @@ test("/ is the dashboard and the nav links to every screen", async ({ page }) =>
   await expect(page).toHaveURL(/\/board$/);
   await expect(page.getByRole("heading", { name: "칸반 보드" })).toBeVisible();
   await expect(nav.getByRole("link", { name: "보드", exact: true })).toHaveAttribute("aria-current", "page");
+  // /board opens the all view by default (PLAN 단계 6.3).
+  await expect(page.getByRole("navigation", { name: "보기 전환" }).getByRole("link", { name: "전체" })).toHaveAttribute(
+    "aria-current",
+    "page",
+  );
   for (const status of ["todo", "doing", "done"]) {
     await expect(page.getByTestId(`column-${status}`)).toBeVisible();
   }

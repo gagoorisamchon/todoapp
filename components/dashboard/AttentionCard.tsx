@@ -15,7 +15,7 @@ export function AttentionCard({ data, carry }: Props) {
     <DashboardCard id="dash-attention" title="확인 필요" testId="dashboard-attention">
       <div className="flex items-baseline justify-between gap-2 text-sm">
         <span>주간 계획에 연결되지 않은 할 일</span>
-        <Link href="/board?view=week#unlinked-heading" className="font-semibold tabular-nums hover:underline">
+        <Link href="/board#unlinked-heading" className="font-semibold tabular-nums hover:underline">
           <span data-testid="unlinked-count">{data.unlinkedCount}</span>개
         </Link>
       </div>
